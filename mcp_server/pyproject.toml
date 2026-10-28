@@ -1,0 +1,28 @@
+[project]
+name = "servidor-mqtt-mcp"
+version = "1.0.0"
+description = "Servidor MCP que conecta Claude Desktop con el objeto inteligente MQTT del grupo 6"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "mcp[cli]>=2.0.0,<3",
+    "paho-mqtt>=2.1.0,<3",
+    "python-dotenv>=1.0.1,<2",
+]
+
+[project.scripts]
+servidor-mqtt-mcp = "servidor_mcp.server:main"
+
+[dependency-groups]
+dev = ["pytest>=8.3.0,<10"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/servidor_mcp"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q -p no:cacheprovider"

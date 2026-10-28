@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "objeto-inteligente-grupo6": {
+      "command": "C:\\RUTA\\A\\uv.exe",
+      "args": [
+        "--directory",
+        "C:\\RUTA\\AL\\PROYECTO\\Practica-MQTT\\mcp_server",
+        "run",
+        "servidor-mqtt-mcp"
+      ]
+    }
+  }
+}

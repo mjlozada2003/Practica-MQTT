@@ -1,0 +1,10 @@
+tipo,prueba,referencia,valor_medido,error_o_latencia,resultado,observaciones
+exactitud,1,5 cm,,,,
+exactitud,2,10 cm,,,,
+exactitud,3,20 cm,,,,
+exactitud,4,30 cm,,,,
+frecuencia,1,30 mensajes/30 s,,,,
+latencia_panel,1,<1000 ms,,,,
+latencia_claude,1,<1000 ms,,,,
+estabilidad,1,15 min,,,,
+reconexion,1,automatica,,,,
