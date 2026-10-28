@@ -14,7 +14,6 @@ except ImportError:  # Compatibilidad con la disposicion del SDK 2.x.
     from mcp.server.mcpserver import MCPServer
 
 from .bridge import ConfiguracionMqtt, PuenteMqtt
-from .service import ServicioObjetoInteligente
 
 logging.basicConfig(
     level=logging.INFO,
@@ -25,7 +24,6 @@ logger = logging.getLogger(__name__)
 
 load_dotenv()
 puente = PuenteMqtt(ConfiguracionMqtt.desde_entorno())
-servicio = ServicioObjetoInteligente(puente)
 mcp = MCPServer("objeto-inteligente-grupo6")
 
 
@@ -36,13 +34,13 @@ def obtener_distancia() -> dict[str, Any]:
     Devuelve centimetros, validez, disponibilidad del ESP32 y antiguedad de la
     lectura. Nunca inventa una medicion si el objeto esta desconectado.
     """
-    return servicio.obtener_distancia()
+    return puente.obtener_distancia()
 
 
 @mcp.tool()
 def obtener_estado_leds() -> dict[str, Any]:
     """Obtiene el estado fisico confirmado de los LEDs rojo, amarillo y verde."""
-    return servicio.obtener_estado_leds()
+    return puente.obtener_estado_leds()
 
 
 @mcp.tool()
@@ -56,7 +54,9 @@ def controlar_leds(
     Solo se modifican los colores indicados; los parametros omitidos conservan
     su estado. Para apagar todos, enviar false en los tres parametros.
     """
-    return servicio.controlar_leds(rojo, amarillo, verde)
+    valores = {"rojo": rojo, "amarillo": amarillo, "verde": verde}
+    cambios = {nombre: valor for nombre, valor in valores.items() if valor is not None}
+    return puente.controlar_leds(cambios)
 
 
 def main() -> None:

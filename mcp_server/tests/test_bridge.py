@@ -12,7 +12,6 @@ from servidor_mcp.bridge import (
     ErrorObjetoInteligente,
     PuenteMqtt,
 )
-from servidor_mcp.service import ServicioObjetoInteligente
 
 
 class ResultadoPublicacion:
@@ -67,11 +66,10 @@ def test_no_inventa_distancia_con_dispositivo_desconectado() -> None:
         puente.obtener_distancia()
 
 
-def test_servicio_exige_al_menos_un_led() -> None:
+def test_puente_exige_al_menos_un_led() -> None:
     puente, _ = puente_listo()
-    servicio = ServicioObjetoInteligente(puente)
     with pytest.raises(ValueError, match="al menos"):
-        servicio.controlar_leds()
+        puente.controlar_leds({})
 
 
 def test_comando_espera_ack_correlacionado() -> None:

@@ -86,7 +86,6 @@ class PuenteMqtt:
         self._broker_conectado = False
         self._dispositivo_en_linea = False
         self._distancia: float | None = None
-        self._distancia_valida = False
         self._instante_distancia: float | None = None
         self._estado_leds: dict[str, bool] | None = None
         self._confirmaciones: dict[str, dict[str, bool]] = {}
@@ -120,8 +119,7 @@ class PuenteMqtt:
             if not self._dispositivo_en_linea:
                 raise ErrorObjetoInteligente("El ESP32 esta desconectado.")
             if (
-                not self._distancia_valida
-                or self._distancia is None
+                self._distancia is None
                 or self._instante_distancia is None
             ):
                 raise ErrorObjetoInteligente("No existe una medicion valida disponible.")
@@ -246,7 +244,6 @@ class PuenteMqtt:
         if not valida and cm is not None:
             raise ValueError("cm debe ser null cuando la medicion no es valida")
         with self._condicion:
-            self._distancia_valida = valida
             self._distancia = float(cm) if valida else None
             self._instante_distancia = time.monotonic()
             self._condicion.notify_all()
