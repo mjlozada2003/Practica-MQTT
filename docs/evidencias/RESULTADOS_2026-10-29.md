@@ -79,7 +79,7 @@ Error absoluto medio de las cuatro muestras: **0.07 cm**. Máximo error observad
 
 | Ruta instrumentada antes del cambio | n | Mínimo | Máximo | >1 s | Limitación |
 |---|---:|---:|---:|---:|---|
-| Script Python → ACK ESP32 | 30 | 543,0 ms | 1996,7 ms | 6/30 | No mide Claude ni luz; 13/30 superaron 900 ms |
+| Script Python → ACK ESP32 | 30 | 543,0 ms | 1996,7 ms | 6/30 | No mide limitacion en circuito; 13/30 superaron 900 ms |
 | Orden de móvil vista en MQTT → ACK | 10 | 303,4 ms | 628,5 ms | 0/10 | No mide toque de pantalla |
 
 Origen: `scripts/latencias_automaticas.csv` y `scripts/latencias_movil.csv`.
