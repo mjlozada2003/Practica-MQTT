@@ -2,7 +2,7 @@
 name = "servidor-mqtt-mcp"
 version = "1.0.0"
 description = "Servidor MCP que conecta Claude Desktop con el objeto inteligente MQTT del grupo 6"
-readme = "README.md"
+readme = { text = "Servidor MCP para el objeto inteligente MQTT del grupo 6. Instalación, configuración y uso en el README.md de la raíz del repositorio.", content-type = "text/markdown" }
 requires-python = ">=3.10"
 dependencies = [
     "mcp[cli]>=2.0.0,<3",

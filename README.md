@@ -1,9 +1,9 @@
 # Práctica MQTT — Objeto inteligente con aplicación móvil y MCP
 
-Sistema de SIS-234 que integra un ESP32, sensor ultrasónico HC-SR04, tres LEDs,
-IoT MQTT Panel y Claude Desktop. Toda interacción con el objeto inteligente
-pasa por el broker MQTT público; no existe comunicación directa desde la
-aplicación o Claude hacia el ESP32.
+Sistema de SIS-234 que integra un ESP32, un sensor ultrasónico HC-SR04, tres LEDs,
+IoT MQTT Panel y Claude Desktop. El ESP32 publica distancias y recibe comandos
+mediante un broker MQTT en la nube. La aplicación móvil y el servidor MCP se
+conectan al mismo broker.
 
 ## Integrantes
 
@@ -20,6 +20,9 @@ HC-SR04 + 3 LEDs <--GPIO--> ESP32 <--MQTT--> broker.hivemq.com
                                   IoT MQTT Panel    Servidor MCP <--stdio--> Claude
 ```
 
+El firmware está en `src/` e `include/`; el servidor Python, en
+`mcp_server/src/servidor_mcp/`; el panel exportado, en `mobile/export/`.
+
 ## Hardware
 
 | Componente | Conexión |
@@ -30,45 +33,59 @@ HC-SR04 + 3 LEDs <--GPIO--> ESP32 <--MQTT--> broker.hivemq.com
 | LED amarillo | GPIO 25 + resistencia 220 Ω |
 | LED verde | GPIO 26 + resistencia 220 Ω |
 
-El HC-SR04 se alimenta a 5 V. Todos los componentes comparten GND. El divisor se
-conecta `Echo → 1 kΩ → nodo GPIO 27 → 2 kΩ → GND`; no conectar Echo directamente
-al ESP32.
+El HC-SR04 se alimenta a 5 V y todos los componentes comparten GND. El divisor se
+conecta `Echo → 1 kΩ → nodo GPIO 27 → 2 kΩ → GND`. El rango de medición configurado
+es de 2 a 30 cm. Fuera del rango o sin eco se publica una lectura inválida.
 
-## Protocolo MQTT
+## Tópicos y mensajes MQTT
 
-Broker `broker.hivemq.com:1883`, MQTT 3.1.1, prefijo
-`sis234/2026-2/grupo6`.
+Broker: `broker.hivemq.com:1883`, MQTT 3.1.1, sin usuario ni contraseña.
+Prefijo de todos los tópicos: `sis234/2026-2/grupo6/`.
 
-| Tópico | Flujo | QoS / Retain | Payload |
-|---|---|---|---|
-| `sensor/distancia` | ESP32 → panel/MCP | 0 / sí | `{"cm":18.4,"valida":true}` |
-| `actuadores/leds/cmd` | panel/MCP → ESP32 | panel: 0, MCP: 1 / no | `{"rojo":true}` |
-| `actuadores/leds/estado` | ESP32 → panel/MCP | 0 / sí | Estado completo y `ack_id` opcional |
-| `dispositivo/estado` | ESP32/LWT → panel/MCP | 0 / sí | `{"en_linea":true}` |
+| Sufijo del tópico | Publica → recibe | QoS | Retain | Mensaje |
+|---|---|---|---|---|
+| `sensor/distancia` | ESP32 → móvil/MCP | 0 | Sí | `{"cm":18.4,"valida":true}` |
+| `actuadores/leds/cmd` | móvil/MCP → ESP32 | móvil: 0; MCP: 1 | No | `{"rojo":true}` |
+| `actuadores/leds/estado` | ESP32 → móvil/MCP | 0 | Sí | `{"rojo":true,"amarillo":false,"verde":false}` |
+| `dispositivo/estado` | ESP32/LWT → móvil/MCP | 0 | Sí | `{"en_linea":true}` |
 
-Los tópicos de la tabla se concatenan al prefijo. Los comandos pueden incluir
-uno o varios LEDs; un campo omitido conserva su estado. El ESP32 rechaza JSON
-inválido, tipos no booleanos y campos desconocidos.
+El tópico completo de distancia, por ejemplo, es
+`sis234/2026-2/grupo6/sensor/distancia`. Una lectura inválida se publica como
+`{"cm":null,"valida":false}`. El LWT informa `{"en_linea":false}` cuando el broker
+detecta una desconexión inesperada del ESP32.
 
-## Requisitos no funcionales declarados
+Los comandos aceptan uno o varios colores con valores booleanos; los omitidos
+conservan su estado. Se rechazan JSON inválido, campos desconocidos y tipos
+incorrectos. El MCP añade un `id` al comando; el firmware lo devuelve como
+`ack_id` en el estado para correlacionar la confirmación.
 
-| Atributo | Valor declarado | Método de verificación |
-|---|---:|---|
-| Estabilidad | 15 minutos | Operación continua sin reinicios/bloqueos |
-| Exactitud | Error máximo ±3 cm en 2–30 cm | Cinta métrica en 5, 10, 20 y 30 cm |
-| Respuesta | <1 segundo | Panel/Claude → broker → LED confirmado |
-| Publicación | 1 lectura/s | Conteo durante 30 segundos |
-| Reconexión | Automática | Corte y restauración de WiFi/MQTT |
+## Valores declarados y comportamiento
 
-La frecuencia declarada y probada es de 1 Hz. La rúbrica escrita menciona 2 Hz
-como referencia; se mantiene 1 Hz considerando la aclaración del docente sobre
-la frecuencia de publicación. El control de LEDs se atiende entre mediciones.
+| Atributo | Valor declarado |
+|---|---|
+| Estabilidad | 15 minutos de operación continua sin reinicios ni bloqueos |
+| Exactitud | Error máximo ±3 cm en el rango de 2–30 cm |
+| Respuesta del actuador | Menos de 1 segundo desde la aplicación móvil |
+| Publicación | 1 lectura/s, intervalo configurado de 1000 ms |
+| Reconexión | Automática de WiFi y MQTT, con espera progresiva entre intentos |
 
-## Preparar y cargar el firmware
+Estos valores son los objetivos del sistema. Los resultados registrados y sus
+límites se detallan al final de este documento.
 
-1. Copiar `include/ConfiguracionEjemplo.h` como `include/Configuracion.h`.
-2. Completar solo SSID y contraseña en el archivo local.
-3. Compilar y cargar:
+## Preparación del ESP32
+
+Se necesita PlatformIO y una conexión WiFi compatible con el ESP32. Desde la
+raíz del repositorio, crear la configuración local una sola vez:
+
+```powershell
+Copy-Item include/ConfiguracionEjemplo.h include/Configuracion.h
+```
+
+Completar `WIFI_SSID` y `WIFI_PASSWORD` en `include/Configuracion.h`.
+Ese archivo está excluido de Git. La plantilla contiene los pines, tópicos,
+rango de medición e intervalo de publicación.
+
+Compilar, cargar y abrir el monitor serie; reemplazar `COM3` por el puerto real:
 
 ```powershell
 pio run -e esp32doit-devkit-v1
@@ -76,60 +93,145 @@ pio run -e esp32doit-devkit-v1 -t upload --upload-port COM3
 pio device monitor -p COM3 -b 115200
 ```
 
-Pruebas lógicas C++:
+## Aplicación móvil: IoT MQTT Panel
 
-```powershell
-pio test -e native
-```
+Importar [panel_grupo6_export.json](mobile/export/panel_grupo6_export.json).
+Incluye un Gauge de distancia y tres switches para los LEDs.
 
-## Configurar IoT MQTT Panel
+| Campo de conexión | Valor |
+|---|---|
+| Broker | `broker.hivemq.com` |
+| Puerto | `1883` |
+| MQTT | 3.1.1 |
+| Usuario/contraseña | Vacíos |
+| Client ID | Un valor distinto por teléfono, como `sis234-g6-panel-kath` |
 
-Seguir [mobile/CONFIGURACION_IOT_MQTT_PANEL.md](mobile/CONFIGURACION_IOT_MQTT_PANEL.md).
-Importar [el panel exportado](mobile/export/panel_grupo6_export.json), que incluye
-un Gauge y tres switches. La conexión usa `broker.hivemq.com:1883`; asignar un
-Client ID distinto en cada teléfono y comprobar lectura y control después de importar.
+El Gauge se suscribe a `sis234/2026-2/grupo6/sensor/distancia`, utiliza JSONPath
+`$.cm`, rango 0–30 y unidad cm.
 
-## Ejecutar el servidor MCP
+Los switches publican en `sis234/2026-2/grupo6/actuadores/leds/cmd`, con QoS 0 y
+Retain desactivado. Se suscriben al estado en
+`sis234/2026-2/grupo6/actuadores/leds/estado`.
+
+| Switch | JSONPath del estado | Plantilla JSON de publicación |
+|---|---|---|
+| Rojo | `$.rojo` | `{"rojo":<payload>}` |
+| Amarillo | `$.amarillo` | `{"amarillo":<payload>}` |
+| Verde | `$.verde` | `{"verde":<payload>}` |
+
+Activar `Payload is JSON Data`; usar `true` para ON y `false` para OFF, sin
+comillas. Las plantillas anteriores reciben esos valores en `<payload>`.
+Con tópicos completos, desactivar el prefijo del dashboard para cada control.
+Después de importar, comprobar conexión, actualización del Gauge y los tres LEDs.
+
+## Servidor MCP y Claude Desktop
+
+Se necesita Python 3.10 o superior, `uv` y Claude Desktop. Desde la raíz:
 
 ```powershell
 Set-Location mcp_server
 Copy-Item .env.example .env
 uv sync --group dev
-uv run pytest
 uv run servidor-mqtt-mcp
 ```
 
-Herramientas expuestas:
+Crear `.env` una sola vez. Permite configurar broker, puerto, keepalive,
+prefijo de tópicos, espera del ACK y antigüedad máxima de la distancia. Los
+valores predeterminados son 1883, 30 s, `sis234/2026-2/grupo6`, 0.9 s para ACK
+y 3.5 s de antigüedad máxima. `.env` está excluido de Git.
+
+Para conectar Claude, utilizar la sección `mcpServers` de
+[claude_desktop_config.example.json](config/claude_desktop_config.example.json)
+en la configuración local de Claude Desktop. Reemplazar las rutas por la ruta
+absoluta de `uv.exe` y la carpeta `mcp_server` de este proyecto. Si hay otros
+servidores configurados, conservarlos. Cerrar Claude completamente y volver a abrirlo.
+
+El servidor usa `stdio` para MCP y envía sus logs a `stderr`.
 
 | Herramienta | Parámetros | Propósito |
 |---|---|---|
-| `obtener_distancia` | Ninguno | Devuelve distancia válida, disponibilidad y antigüedad |
-| `obtener_estado_leds` | Ninguno | Devuelve el estado confirmado de los tres LEDs |
-| `controlar_leds` | `rojo?`, `amarillo?`, `verde?` | Cambia LEDs y espera `ack_id` hasta 900 ms |
+| `obtener_distancia` | Ninguno | Devuelve cm, validez, disponibilidad y antigüedad de la lectura |
+| `obtener_estado_leds` | Ninguno | Consulta el estado de los tres LEDs reportado por el ESP32 |
+| `controlar_leds` | `rojo`, `amarillo`, `verde`: booleanos opcionales | Cambia los colores indicados y espera su `ack_id` hasta 900 ms |
 
-Copiar `config/claude_desktop_config.example.json` a la configuracion local de
-Claude Desktop, reemplazar ambas rutas absolutas y cerrar Claude completamente
-antes de volver a abrirlo.
+Si no hay una distancia disponible, `obtener_distancia` devuelve `cm: null`,
+`valida: false` y un `mensaje` explicativo. La antigüedad de la lectura no es la
+latencia de un comando. La confirmación de LEDs corresponde al estado informado
+por el firmware.
 
-Si el sensor publica `{"cm":null,"valida":false}`, la herramienta de lectura
-responde un resultado estructurado con `cm: null`, `valida: false` y `mensaje`
-en lugar de fallar con un error inesperado. Requiere reiniciar Claude Desktop
-tras actualizar el servidor Python.
+Ejemplos de uso en Claude: «¿A qué distancia está el objeto?», «Enciende el rojo y
+apaga los demás» y «Apaga los tres LEDs».
 
-## Verificación y defensa
+## Pruebas y medición
 
-- [Guía de Demo](docs/GUIA_DEMO.md)
-- [Guía de defensa individual](docs/GUIA_DEFENSA.md)
-- [Plantilla de evidencias](docs/evidencias/plantilla_mediciones.csv)
-- [Resultados registrados en pruebas reales](docs/evidencias/RESULTADOS_2026-10-29.md)
-- [Mediciones comprobadas (CSV)](docs/evidencias/mediciones_2026-10-29.csv)
-- [Script de medicion MQTT](scripts/medir_latencia_mqtt_v3.py)
+Pruebas lógicas C++ desde la raíz:
 
-Cada integrante debe realizar commits desde su propia cuenta. Antes de publicar:
+```powershell
+pio test -e native
+```
+
+Pruebas Python desde `mcp_server`:
+
+```powershell
+uv run pytest
+```
+
+Para registrar mediciones MQTT, desde `mcp_server`:
+
+```powershell
+uv run python ../scripts/medir_latencia_mqtt_v3.py --modo automatico --cantidad 10 --led rojo --salida latencias_automaticas_nuevas.csv
+uv run python ../scripts/medir_latencia_mqtt_v3.py --modo observar --cantidad 10 --duracion 120 --salida latencias_movil_nuevas.csv
+```
+
+El modo `automatico` alterna el LED rojo y mide publicación local → ACK
+correlacionado. El modo `observar` mide comando recibido por el observador →
+estado recibido; accionar un control por vez. Ninguno mide directamente desde
+el toque en el teléfono hasta el cambio físico del LED. Esa medición requiere
+video o instrumentación que observe ambos eventos.
+
+## Resultados registrados el 29/10/2026
+
+Las evidencias incluyen lecturas y confirmaciones aportadas por el grupo,
+capturas y CSV. Las ocho pruebas Python pasaron con MCP 2.3.0 y paho-mqtt 2.1.0
+instalados; las pruebas usan un cliente MQTT simulado.
+
+| Referencia física | Lectura | Error absoluto |
+|---|---|---|
+| 5 cm | 5.08 cm | 0.08 cm |
+| 10 cm | 10.03 cm | 0.03 cm |
+| 20 cm | 20.12 cm | 0.12 cm |
+| 30 cm | 29.95 cm | 0.05 cm |
+
+Son muestras únicas por posición; error máximo observado 0.12 cm. No acreditan
+por sí solas el error máximo de todo el rango en cualquier condición.
+
+| Prueba | Resultado registrado | Alcance |
+|---|---|---|
+| Publicación | 31 mensajes entre 06:00:03 y 06:00:33; 29 válidos y 2 inválidos | Aproximadamente 1 Hz, con marcas de un segundo |
+| Estabilidad | 15 minutos y 8 segundos | Continuidad sin reinicios reportada por el grupo; sin registro crudo completo |
+| Reconexión WiFi | Estado offline a 05:50:05 y online a 05:50:46 | Recuperación sin reiniciar reportada; 41 s entre eventos, sin hora exacta de restauración de red |
+| Consulta de Claude | 10.84 cm, antigüedad 941 ms | Consulta y control de LEDs reportados por el grupo |
+| 30 comandos automáticos | Promedio 922.03 ms; máximo 1996.7 ms; 6 por encima de 1 s | Publicación local → ACK |
+| 10 comandos observados del móvil | Promedio 452.0 ms; máximo 628.5 ms | Comando observado → confirmación observada |
+
+Quedan pendientes la medición física toque → LED, el registro específico de
+latencias de Claude y la comprobación de importación del panel en otro teléfono.
+El timeout MCP de 900 ms puede vencer antes de que llegue una confirmación;
+no equivale por sí solo a que el LED no haya cambiado.
+
+Archivos de respaldo:
+
+- [Mediciones resumidas](docs/evidencias/mediciones_2026-10-29.csv).
+- [30 latencias automáticas con ACK](scripts/latencias_automaticas.csv).
+- [10 latencias observadas del móvil](scripts/latencias_movil.csv).
+- [Transcripción de 30 mediciones](scripts/Latencias_MQTT_Grupo6.csv).
+- [Captura del Gauge](docs/evidencias/capturas/gauge_iot_mqtt_panel_2026-10-29.jpg).
+- [Captura del servidor MCP](docs/evidencias/capturas/claude_mcp_en_ejecucion_2026-10-29.png).
+- [Plantilla para nuevas mediciones](docs/evidencias/plantilla_mediciones.csv).
+
+Las credenciales WiFi se mantienen en `include/Configuracion.h` y los ajustes
+locales del MCP en `.env`. Para revisar posibles secretos desde la raíz:
 
 ```powershell
 pwsh -File scripts/auditar_secretos.ps1
 ```
-
-No se requiere informe técnico. El repositorio, configuraciones y prototipo son
-la referencia para la Demo y la defensa individual.
