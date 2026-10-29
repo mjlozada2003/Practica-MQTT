@@ -34,8 +34,10 @@ class ClienteFalso:
         return ResultadoPublicacion()
 
 
-def mensaje(topic: str, datos: dict) -> SimpleNamespace:
-    return SimpleNamespace(topic=topic, payload=json.dumps(datos).encode())
+def mensaje(topic: str, datos: dict, retain: bool = False) -> SimpleNamespace:
+    return SimpleNamespace(
+        topic=topic, payload=json.dumps(datos).encode(), retain=retain
+    )
 
 
 def puente_listo(timeout: float = 0.15) -> tuple[PuenteMqtt, ClienteFalso]:
@@ -99,6 +101,7 @@ def test_comando_espera_ack_correlacionado() -> None:
     hilo.start()
     resultado = puente.controlar_leds({"rojo": True})
     hilo.join()
+    assert resultado["enviado"] is True
     assert resultado["confirmado"] is True
     assert resultado["rojo"] is True
     assert cliente.publicaciones[0][2:] == (1, False)
@@ -126,9 +129,56 @@ def test_ack_incorrecto_termina_en_timeout() -> None:
 
     hilo = threading.Thread(target=confirmar_otro)
     hilo.start()
-    with pytest.raises(ErrorObjetoInteligente, match="no confirmo"):
-        puente.controlar_leds({"rojo": True})
+    resultado = puente.controlar_leds({"rojo": True})
     hilo.join()
+    assert resultado["enviado"] is True
+    assert resultado["confirmado"] is False
+    assert resultado["ack_id"] != "otro-id"
+    assert "desconocido" in resultado["mensaje"]
+
+
+def test_sin_ack_devuelve_estado_no_confirmado() -> None:
+    puente, _ = puente_listo(timeout=0.01)
+    resultado = puente.controlar_leds({"rojo": True})
+    assert resultado["confirmado"] is False
+    assert "rojo" not in resultado
+
+
+def test_retenciones_al_arrancar_no_borran_estado_por_online() -> None:
+    puente, _ = puente_listo()
+    puente._dispositivo_en_linea = False
+    puente._actualizar_distancia({"cm": 18.5, "valida": True})
+    puente._actualizar_leds({"rojo": False, "amarillo": True, "verde": False})
+    puente._actualizar_dispositivo({"en_linea": True})
+    assert puente.obtener_distancia()["cm"] == 18.5
+    assert puente.obtener_estado_leds()["amarillo"] is True
+
+
+def test_retencion_offline_invalida_cache_incluso_al_arrancar() -> None:
+    puente, _ = puente_listo()
+    puente._dispositivo_en_linea = False
+    puente._actualizar_leds({"rojo": True, "amarillo": False, "verde": False})
+    puente._actualizar_dispositivo({"en_linea": False})
+    puente._actualizar_dispositivo({"en_linea": True})
+    with pytest.raises(ErrorObjetoInteligente, match="Aun no se recibio"):
+        puente.obtener_estado_leds()
+
+
+def test_distancia_mqtt_retenida_no_parece_medicion_reciente() -> None:
+    puente, _ = puente_listo()
+    puente._al_recibir(
+        None, None,
+        mensaje(puente.configuracion.topic_distancia,
+                {"cm": 11.7, "valida": True}, retain=True),
+    )
+    with pytest.raises(ErrorObjetoInteligente, match="No existe una medicion valida"):
+        puente.obtener_distancia()
+    puente._al_recibir(
+        None, None,
+        mensaje(puente.configuracion.topic_distancia,
+                {"cm": 12.4, "valida": True}),
+    )
+    assert puente.obtener_distancia()["cm"] == 12.4
 
 
 def test_payload_invalido_no_reemplaza_estado() -> None:

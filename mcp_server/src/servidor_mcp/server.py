@@ -13,7 +13,7 @@ try:
 except ImportError:  # Compatibilidad con la disposicion del SDK 2.x.
     from mcp.server.mcpserver import MCPServer
 
-from .bridge import ConfiguracionMqtt, PuenteMqtt
+from .bridge import ConfiguracionMqtt, ErrorObjetoInteligente, PuenteMqtt
 from .service import ServicioObjetoInteligente
 
 logging.basicConfig(
@@ -29,14 +29,29 @@ servicio = ServicioObjetoInteligente(puente)
 mcp = MCPServer("objeto-inteligente-grupo6")
 
 
+def _consultar_distancia_segura() -> dict[str, Any]:
+    """Return a structured no-reading result for expected device conditions.
+
+    Keep programming errors visible: only ErrorObjetoInteligente is translated.
+    An invalid/null, stale, or unavailable reading is never replaced by an old
+    cached number or an invented distance.
+    """
+    try:
+        return servicio.obtener_distancia()
+    except ErrorObjetoInteligente as error:
+        logger.info("Medicion no disponible para Claude: %s", error)
+        return {"cm": None, "valida": False, "mensaje": str(error)}
+
+
 @mcp.tool()
 def obtener_distancia() -> dict[str, Any]:
-    """Obtiene la distancia actual medida por el HC-SR04.
+    """Consulta la distancia reciente del HC-SR04 (cm) mediante MQTT.
 
-    Devuelve centimetros, validez, disponibilidad del ESP32 y antiguedad de la
-    lectura. Nunca inventa una medicion si el objeto esta desconectado.
+    Si el sensor no tiene eco, la lectura es invalida, esta desactualizada o
+    el dispositivo esta desconectado, devuelve cm=null, valida=false y una
+    explicacion en mensaje. No inventes una distancia en esos casos.
     """
-    return servicio.obtener_distancia()
+    return _consultar_distancia_segura()
 
 
 @mcp.tool()

@@ -1,0 +1,11 @@
+﻿modo,numero,cambio,hora_inicio,hora_confirmacion,latencia_ms,confirmado,ack_id,nota
+observar,1,"{""rojo"": true}",2026-10-29T11:16:07.889-04:00,2026-10-29T11:16:08.237-04:00,348.3,True,,ACK firmware; no mide luz LED
+observar,2,"{""rojo"": false}",2026-10-29T11:16:09.256-04:00,2026-10-29T11:16:09.703-04:00,447.5,True,,ACK firmware; no mide luz LED
+observar,3,"{""rojo"": true}",2026-10-29T11:16:10.670-04:00,2026-10-29T11:16:11.115-04:00,444.4,True,,ACK firmware; no mide luz LED
+observar,4,"{""rojo"": false}",2026-10-29T11:16:11.411-04:00,2026-10-29T11:16:11.714-04:00,303.4,True,,ACK firmware; no mide luz LED
+observar,5,"{""rojo"": false}",2026-10-29T11:16:12.272-04:00,2026-10-29T11:16:12.757-04:00,484.4,True,,ACK firmware; no mide luz LED
+observar,6,"{""rojo"": true}",2026-10-29T11:16:13.110-04:00,2026-10-29T11:16:13.555-04:00,445.3,True,,ACK firmware; no mide luz LED
+observar,7,"{""rojo"": false}",2026-10-29T11:16:14.210-04:00,2026-10-29T11:16:14.599-04:00,389.3,True,,ACK firmware; no mide luz LED
+observar,8,"{""rojo"": true}",2026-10-29T11:16:15.089-04:00,2026-10-29T11:16:15.635-04:00,546.4,True,,ACK firmware; no mide luz LED
+observar,9,"{""rojo"": false}",2026-10-29T11:16:16.029-04:00,2026-10-29T11:16:16.658-04:00,628.5,True,,ACK firmware; no mide luz LED
+observar,10,"{""rojo"": true}",2026-10-29T11:16:16.972-04:00,2026-10-29T11:16:17.455-04:00,482.5,True,,ACK firmware; no mide luz LED
