@@ -16,6 +16,7 @@ def test_bridge_indica_error_esperado_para_null() -> None:
     from servidor_mcp.bridge import ErrorObjetoInteligente
 
     puente = PuenteMqtt(ConfiguracionMqtt(), cliente=ClienteFalso())
+    puente._broker_conectado = True
     puente._dispositivo_en_linea = True
     puente._actualizar_distancia({"cm": None, "valida": False})
     with pytest.raises(ErrorObjetoInteligente, match="No existe una medicion valida"):
@@ -31,11 +32,8 @@ def test_mcp_convierte_error_de_null_en_respuesta_estructurada(monkeypatch) -> N
         raise ErrorObjetoInteligente("No existe una medicion valida disponible.")
 
     monkeypatch.setattr(server.servicio, "obtener_distancia", sin_lectura)
-    # El SDK aplica su decorador a la funcion, por ello comprobamos la funcion
-    # registrada en el modulo solo si conserva el callable Python directo.
-    if not callable(server.obtener_distancia):
-        pytest.skip("El SDK MCP encapsulo la funcion; probar mediante cliente MCP")
-    resultado = server.obtener_distancia()
+    # Comprobar la respuesta segura sin depender del envoltorio del SDK MCP.
+    resultado = server._consultar_distancia_segura()
     assert resultado["cm"] is None
     assert resultado["valida"] is False
     assert "No existe una medicion valida" in resultado["mensaje"]

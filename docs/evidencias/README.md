@@ -22,5 +22,8 @@ Procedimiento mínimo:
 - [Captura Gauge](capturas/gauge_iot_mqtt_panel_2026-10-29.jpg).
 - [Captura Claude MCP](capturas/claude_mcp_en_ejecucion_2026-10-29.png).
 
-El script `scripts/medir_latencia_mqtt.py` permite automatizar pruebas nuevas.
-Las latencias siguen pendientes; no imputar valores ficticios.
+El script `scripts/medir_latencia_mqtt_v3.py` permite automatizar pruebas nuevas.
+Ya existen [30 mediciones automáticas](../../scripts/latencias_automaticas.csv) y
+[10 observaciones del móvil](../../scripts/latencias_movil.csv). La medición física
+desde el toque hasta el LED y el registro específico de latencias de Claude siguen pendientes.
+La exportación del panel también está [incorporada](../../mobile/export/panel_grupo6_export.json).

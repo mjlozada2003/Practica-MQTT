@@ -10,5 +10,5 @@ mcp_distancia,Lectura Claude,2026-10-29,,10.84,,cm,Correcto,"Lectura valida, ESP
 mcp_leds,Accionamiento Claude,2026-10-29,,,,,Confirmado por usuario,Usuario informa Claude acciona LEDs; faltan latencias crudas
 app_gauge,Visualizacion grafica,2026-10-29 06:23:40,,15.54,,cm,Correcto,Captura de Gauge recibida
 app_leds,Tres switches,2026-10-29,,,,,Confirmado por usuario,Rojo amarillo verde responden con ON/OFF
-latencia_movil,Panel a LED,Pendiente,,,,ms,No medida,Ejecutar script y video para medicion fisica
+latencia_movil,Panel a LED,2026-10-29,,,,ms,Observacion MQTT registrada; fisica pendiente,10 observaciones en scripts/latencias_movil.csv; promedio 452.0 ms; maximo 628.5 ms; no mide toque a LED fisico
 latencia_claude,Claude a LED,Pendiente,,,,ms,No medida,Registrar latencia_ms del MCP y verificar LED fisico

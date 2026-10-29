@@ -28,7 +28,7 @@ Error absoluto medio de las cuatro muestras: **0.07 cm**. Máximo error observad
 - Registros aportados desde **06:00:03** hasta **06:00:33**, ambos incluidos: **31 mensajes** en un intervalo de 30 s entre extremos.
 - **29 válidos** y **2 inválidos** (`{"cm":null,"valida":false}`).
 - Cadencia observada: aproximadamente **1 publicación/s**. El cociente 31/30 es ~1.03 mensajes/s si se cuentan ambas fronteras; no constituye medición precisa por tener marcas con resolución de un segundo.
-- Intervalo configurado en `ConfiguracionEjemplo.h`: **1000 ms**. La referencia del docente es ≥2 lecturas/s; **no se realizó ni se declara aquí una prueba a 2 Hz**.
+- Intervalo configurado en `ConfiguracionEjemplo.h`: **1000 ms**. La rúbrica escrita menciona ≥2 lecturas/s como referencia; se mantiene el mínimo declarado de 1 Hz considerando la aclaración del docente. No se declara una prueba a 2 Hz.
 
 ## 4. Estabilidad
 
@@ -50,7 +50,7 @@ Error absoluto medio de las cuatro muestras: **0.07 cm**. Máximo error observad
 - Captura aportada: [Gauge](capturas/gauge_iot_mqtt_panel_2026-10-29.jpg), muestra **15.54 cm** con hora **06:23:40**.
 - Configuración efectivamente probada: Topic `sis234/2026-2/grupo6/sensor/distancia`, JSONPath `$.cm`, rango 0–30 cm.
 - Tres interruptores para rojo, amarillo y verde: el usuario confirmó encendido/apagado individual exitoso.
-- La función `Share via MQTT` se mostró en una captura, pero **no es prueba de exportación a archivo**. La exportación permanece pendiente.
+- La exportación está incorporada en [panel_grupo6_export.json](../../mobile/export/panel_grupo6_export.json): Gauge y tres switches. Se completó el host con `broker.hivemq.com`; verificar la importación en el teléfono.
 
 ## 7. Claude Desktop / MCP
 
@@ -62,10 +62,10 @@ Error absoluto medio de las cuatro muestras: **0.07 cm**. Máximo error observad
 
 ## 8. Tareas y evidencia pendiente
 
-1. **Latencia móvil → LED**: ejecutar 10 pruebas y registrar CSV con `scripts/medir_latencia_mqtt.py`; para afirmar end-to-end físico completo agregar video donde se vea toque y LED, o instrumentación física.
+1. **Latencia móvil → LED físico**: ya hay 10 observaciones comando → confirmación en [latencias_movil.csv](../../scripts/latencias_movil.csv), con promedio 452.0 ms y máximo 628.5 ms. Falta medir desde el toque hasta el cambio físico mediante video o instrumentación. Las 30 pruebas de [latencias_automaticas.csv](../../scripts/latencias_automaticas.csv) tienen promedio 922.03 ms, máximo 1996.7 ms y 6 confirmaciones de 30 por encima de 1 s; miden ida y vuelta hasta ACK y no prueban por sí solas la latencia física del actuador.
 2. **Latencia Claude → ACK**: registrar 10 comandos y sus valores `latencia_ms`; corroborar visualmente LEDs.
-3. **Exportación del panel**: exportar el archivo real desde Settings en IoT MQTT Panel, revisar privacidad y guardar en `mobile/export/`.
-4. **Frecuencia ≥2 Hz, si se adopta el valor de referencia**: cambiar intervalo en configuración local a 500 ms, repetir conteo, estabilidad y documentar.
+3. **Panel exportado**: archivo incorporado; falta verificar su importación y funcionamiento en otro teléfono.
+4. **Frecuencia declarada**: conservar 1 Hz; no hay cambio pendiente a 2 Hz según la aclaración del docente.
 5. **Repeticiones de exactitud**: cinco lecturas por distancia con referencia física fija para reforzar evidencia.
 6. Verificar commits por integrante en el repositorio GitHub real y registrar captura o `git shortlog -sne --all`.
 

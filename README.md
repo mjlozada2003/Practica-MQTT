@@ -42,7 +42,7 @@ Broker `broker.hivemq.com:1883`, MQTT 3.1.1, prefijo
 | Tópico | Flujo | QoS / Retain | Payload |
 |---|---|---|---|
 | `sensor/distancia` | ESP32 → panel/MCP | 0 / sí | `{"cm":18.4,"valida":true}` |
-| `actuadores/leds/cmd` | panel/MCP → ESP32 | 1 / no | `{"rojo":true}` |
+| `actuadores/leds/cmd` | panel/MCP → ESP32 | panel: 0, MCP: 1 / no | `{"rojo":true}` |
 | `actuadores/leds/estado` | ESP32 → panel/MCP | 0 / sí | Estado completo y `ack_id` opcional |
 | `dispositivo/estado` | ESP32/LWT → panel/MCP | 0 / sí | `{"en_linea":true}` |
 
@@ -60,11 +60,9 @@ inválido, tipos no booleanos y campos desconocidos.
 | Publicación | 1 lectura/s | Conteo durante 30 segundos |
 | Reconexión | Automática | Corte y restauración de WiFi/MQTT |
 
-La frecuencia de 1 Hz es la configuracion actualmente probada; la referencia
-academica es 2 Hz. El bucle MQTT se procesa continuamente, de modo que la
-respuesta de los LEDs no espera a la siguiente medicion. Para alcanzar 2 Hz,
-cambiar SENSOR_PUBLISH_INTERVAL_MS a 500 en el archivo de configuracion local
-y repetir pruebas; no se ha aplicado ese cambio en este ZIP.
+La frecuencia declarada y probada es de 1 Hz. La rúbrica escrita menciona 2 Hz
+como referencia; se mantiene 1 Hz considerando la aclaración del docente sobre
+la frecuencia de publicación. El control de LEDs se atiende entre mediciones.
 
 ## Preparar y cargar el firmware
 
@@ -87,8 +85,9 @@ pio test -e native
 ## Configurar IoT MQTT Panel
 
 Seguir [mobile/CONFIGURACION_IOT_MQTT_PANEL.md](mobile/CONFIGURACION_IOT_MQTT_PANEL.md).
-Después de probar el panel, exportarlo a `mobile/export/` y revisar que no
-contenga información privada antes de versionarlo.
+Importar [el panel exportado](mobile/export/panel_grupo6_export.json), que incluye
+un Gauge y tres switches. La conexión usa `broker.hivemq.com:1883`; asignar un
+Client ID distinto en cada teléfono y comprobar lectura y control después de importar.
 
 ## Ejecutar el servidor MCP
 
@@ -124,7 +123,7 @@ tras actualizar el servidor Python.
 - [Plantilla de evidencias](docs/evidencias/plantilla_mediciones.csv)
 - [Resultados registrados en pruebas reales](docs/evidencias/RESULTADOS_2026-10-29.md)
 - [Mediciones comprobadas (CSV)](docs/evidencias/mediciones_2026-10-29.csv)
-- [Script de medicion MQTT](scripts/medir_latencia_mqtt.py)
+- [Script de medicion MQTT](scripts/medir_latencia_mqtt_v3.py)
 
 Cada integrante debe realizar commits desde su propia cuenta. Antes de publicar:
 

@@ -25,13 +25,13 @@ python -m pip install "paho-mqtt>=2.1,<3"
 Ejecutar desde la raíz del repositorio:
 
 ```powershell
-python .\scripts\medir_latencia_mqtt.py --modo automatico --cantidad 10 --led rojo --salida latencias_automaticas.csv
+python .\scripts\medir_latencia_mqtt_v3.py --modo automatico --cantidad 10 --led rojo --salida latencias_automaticas.csv
 ```
 
 Con `uv` desde la carpeta `mcp_server`:
 
 ```powershell
-uv run python ..\scripts\medir_latencia_mqtt.py --modo automatico --cantidad 10 --led rojo --salida latencias_automaticas.csv
+uv run python ..\scripts\medir_latencia_mqtt_v3.py --modo automatico --cantidad 10 --led rojo --salida latencias_automaticas.csv
 ```
 
 No usar el móvil o Claude para alterar simultáneamente el mismo LED. El script alterna ON/OFF. Validar que llegue a 10 respuestas sin timeout. El CSV contiene hora de envío, hora de confirmación, latencia y estado.
@@ -39,7 +39,7 @@ No usar el móvil o Claude para alterar simultáneamente el mismo LED. El script
 ## Observar 10 acciones del celular
 
 ```powershell
-python .\scripts\medir_latencia_mqtt.py --modo observar --cantidad 10 --duracion 120 --salida latencias_movil_observadas.csv
+python .\scripts\medir_latencia_mqtt_v3.py --modo observar --cantidad 10 --duracion 120 --salida latencias_movil_observadas.csv
 ```
 
 Con el script esperando, activar y desactivar un solo LED desde IoT MQTT Panel una acción a la vez. Si hay un fallo, conservar la fila de timeout. Reportar la métrica como **«orden observada → confirmación observada»**, NO «toque → LED físico».

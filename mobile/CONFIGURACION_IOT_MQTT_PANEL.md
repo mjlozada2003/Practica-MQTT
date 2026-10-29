@@ -23,7 +23,7 @@ No reutilizar el mismo Client ID en dos teléfonos abiertos simultáneamente.
 - QoS: 0.
 - Mínimo: 0; máximo: 30; unidad: cm.
 
-### Historial — Line Graph
+### Historial — Line Graph (opcional, no incluido en la exportación)
 
 - Mismo tópico y JSON path del Gauge.
 - QoS: 0.
@@ -49,7 +49,7 @@ Los tres publican en `sis234/2026-2/grupo6/actuadores/leds/cmd`, QoS 0
 Estos ajustes publican JSON booleano valido; no usar JSON completo simultaneamente
 como Payload on/off y como plantilla de publicacion.
 
-### Indicadores confirmados
+### Indicadores adicionales (opcionales, no incluidos en la exportación)
 
 Crear tres LED Indicator suscritos a
 `sis234/2026-2/grupo6/actuadores/leds/estado`, con JSON paths `$.rojo`,
@@ -61,7 +61,14 @@ Crear un cuarto indicador suscrito a
 
 ## Exportación
 
-Después de probar el panel en el teléfono, usar la opción Export de la
-aplicación y guardar el archivo generado en `mobile/export/`. Revisar que no
-contenga datos privados antes de agregarlo a Git. El archivo real debe provenir
-de la aplicación; este repositorio no fabrica un esquema de exportación.
+La exportación está incluida en [panel_grupo6_export.json](export/panel_grupo6_export.json).
+Contiene un Gauge y tres switches; el Gauge cumple la visualización gráfica solicitada.
+
+1. Importar el archivo en IoT MQTT Panel.
+2. Revisar la conexión: broker `broker.hivemq.com`, puerto `1883`, sin usuario ni contraseña.
+3. Asignar un Client ID único por teléfono antes de conectar.
+4. Verificar que el Gauge cambie y que cada switch controle el LED correspondiente.
+
+El campo `host`, vacío en la exportación original, se completó con el broker público
+documentado. Si se vuelve a exportar el panel, revisar conexión y datos privados
+antes de reemplazar el archivo versionado.
