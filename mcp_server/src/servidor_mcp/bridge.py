@@ -22,7 +22,7 @@ class ConfiguracionMqtt:
     puerto: int = 1883
     keepalive: int = 30
     topic_base: str = "sis234/2026-2/grupo6"
-    timeout_ack: float = 0.9
+    timeout_ack: float = 3.0
     antiguedad_maxima_distancia: float = 3.5
 
     @classmethod
@@ -207,10 +207,20 @@ class PuenteMqtt:
                     )
                 restante = limite - time.monotonic()
                 if restante <= 0:
-                    raise ErrorObjetoInteligente(
-                        "El ESP32 no confirmo el comando dentro de "
-                        f"{round(self.configuracion.timeout_ack * 1000)} ms."
-                    )
+                    # La publicación fue aceptada localmente, pero no hay ACK
+                    # correlacionado. No afirmar éxito ni que el LED cambió.
+                    return {
+                        "enviado": True,
+                        "confirmado": False,
+                        "ack_id": identificador,
+                        "latencia_ms": round((time.monotonic() - inicio) * 1000),
+                        "mensaje": (
+                            "El comando se envio a MQTT, pero el ESP32 no lo "
+                            "confirmo dentro del plazo. El estado del LED "
+                            "es desconocido; consulta obtener_estado_leds "
+                            "para comprobarlo."
+                        ),
+                    }
                 self._condicion.wait(restante)
             estado = self._confirmaciones.pop(identificador)
 
@@ -218,6 +228,7 @@ class PuenteMqtt:
             raise ErrorObjetoInteligente("La confirmacion no coincide con el comando.")
         return {
             **estado,
+            "enviado": True,
             "confirmado": True,
             "latencia_ms": round((time.monotonic() - inicio) * 1000),
             "ack_id": identificador,
@@ -325,9 +336,10 @@ class PuenteMqtt:
         if type(en_linea) is not bool:
             raise ValueError("en_linea debe ser booleano")
         with self._condicion:
-            if en_linea != self._dispositivo_en_linea:
-                # Un cambio online/offline invalida los valores de la sesion
-                # anterior. Esperar mensajes nuevos para publicar estado fiable.
+            if not en_linea:
+                # Los retenidos pueden llegar en cualquier orden. Al recibir
+                # OFFLINE, invalidar incluso durante el arranque. En cambio,
+                # ONLINE no debe borrar telemetria ya recibida de esta sesion.
                 self._invalidar_cache()
             self._dispositivo_en_linea = en_linea
             self._condicion.notify_all()

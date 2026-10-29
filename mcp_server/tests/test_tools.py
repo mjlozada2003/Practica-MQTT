@@ -16,6 +16,7 @@ def test_bridge_indica_error_esperado_para_null() -> None:
     from servidor_mcp.bridge import ErrorObjetoInteligente
 
     puente = PuenteMqtt(ConfiguracionMqtt(), cliente=ClienteFalso())
+    puente._broker_conectado = True
     puente._dispositivo_en_linea = True
     puente._actualizar_distancia({"cm": None, "valida": False})
     with pytest.raises(ErrorObjetoInteligente, match="No existe una medicion valida"):

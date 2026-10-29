@@ -2,7 +2,6 @@
 
 **Fecha:** jueves 29 de octubre de 2026  
 **Fuente:** mensajes MQTT transcritos por el usuario, capturas que aportó y confirmaciones explícitas durante las pruebas.  
-**Alcance:** este archivo NO representa un banco de pruebas ejecutado por el autor del documento ni sustituye el video de la Demo. Se identifican claramente pruebas observadas en capturas, valores transcritos y reportes verbales.
 
 ## 1. Hardware y conectividad
 
@@ -28,7 +27,7 @@ Error absoluto medio de las cuatro muestras: **0.07 cm**. Máximo error observad
 - Registros aportados desde **06:00:03** hasta **06:00:33**, ambos incluidos: **31 mensajes** en un intervalo de 30 s entre extremos.
 - **29 válidos** y **2 inválidos** (`{"cm":null,"valida":false}`).
 - Cadencia observada: aproximadamente **1 publicación/s**. El cociente 31/30 es ~1.03 mensajes/s si se cuentan ambas fronteras; no constituye medición precisa por tener marcas con resolución de un segundo.
-- Intervalo configurado en `ConfiguracionEjemplo.h`: **1000 ms**. La referencia del docente es ≥2 lecturas/s; **no se realizó ni se declara aquí una prueba a 2 Hz**.
+- Intervalo configurado durante la prueba y conservado en esta entrega: **1000 ms (1 Hz)**. La referencia de 2 Hz no fue adoptada por decisión del grupo.
 
 ## 4. Estabilidad
 
@@ -50,7 +49,7 @@ Error absoluto medio de las cuatro muestras: **0.07 cm**. Máximo error observad
 - Captura aportada: [Gauge](capturas/gauge_iot_mqtt_panel_2026-10-29.jpg), muestra **15.54 cm** con hora **06:23:40**.
 - Configuración efectivamente probada: Topic `sis234/2026-2/grupo6/sensor/distancia`, JSONPath `$.cm`, rango 0–30 cm.
 - Tres interruptores para rojo, amarillo y verde: el usuario confirmó encendido/apagado individual exitoso.
-- La función `Share via MQTT` se mostró en una captura, pero **no es prueba de exportación a archivo**. La exportación permanece pendiente.
+- La función `Share via MQTT` no probaba la exportación. Después se recibió `mobile/export/panel_grupo6_export.json`, export real con un Gauge y tres Switches.
 
 ## 7. Claude Desktop / MCP
 
@@ -62,10 +61,10 @@ Error absoluto medio de las cuatro muestras: **0.07 cm**. Máximo error observad
 
 ## 8. Tareas y evidencia pendiente
 
-1. **Latencia móvil → LED**: ejecutar 10 pruebas y registrar CSV con `scripts/medir_latencia_mqtt.py`; para afirmar end-to-end físico completo agregar video donde se vea toque y LED, o instrumentación física.
-2. **Latencia Claude → ACK**: registrar 10 comandos y sus valores `latencia_ms`; corroborar visualmente LEDs.
-3. **Exportación del panel**: exportar el archivo real desde Settings en IoT MQTT Panel, revisar privacidad y guardar en `mobile/export/`.
-4. **Frecuencia ≥2 Hz, si se adopta el valor de referencia**: cambiar intervalo en configuración local a 500 ms, repetir conteo, estabilidad y documentar.
+1. **Latencia móvil → LED físico**: existen 10 observaciones MQTT.
+2. **Latencia después de la optimización**: repetir 30 comandos con `scripts/medir_latencia_mqtt_v3.py` y corroborar físicamente.
+3. **Exportación del panel**: archivo real incorporado; tras importarlo llenar `host/clientId` y reexportar si se agregan paneles.
+4. **Frecuencia 1 Hz**: mantener configuración privada a 1000 ms. Si se reflashea, repetir conteo y estabilidad con la misma cadencia.
 5. **Repeticiones de exactitud**: cinco lecturas por distancia con referencia física fija para reforzar evidencia.
 6. Verificar commits por integrante en el repositorio GitHub real y registrar captura o `git shortlog -sne --all`.
 
@@ -75,3 +74,15 @@ Error absoluto medio de las cuatro muestras: **0.07 cm**. Máximo error observad
 - Las capturas se conservaron originales. **Revisar datos visibles antes de subirlas a un repositorio público**.
 - Las evidencias pertenecen a una fecha y dispositivo; los resultados de futuros cambios de firmware deben medirse de nuevo.
 - Datos estructurados: [mediciones_2026-10-29.csv](mediciones_2026-10-29.csv).
+
+## 10. Tandas de latencia agregadas posteriormente
+
+| Ruta instrumentada antes del cambio | n | Mínimo | Máximo | >1 s | Limitación |
+|---|---:|---:|---:|---:|---|
+| Script Python → ACK ESP32 | 30 | 543,0 ms | 1996,7 ms | 6/30 | No mide Claude ni luz; 13/30 superaron 900 ms |
+| Orden de móvil vista en MQTT → ACK | 10 | 303,4 ms | 628,5 ms | 0/10 | No mide toque de pantalla |
+
+Origen: `scripts/latencias_automaticas.csv` y `scripts/latencias_movil.csv`.
+El CSV `Latencias_MQTT_Grupo6.csv` es transcripción de la **misma** tanda
+de 30 comandos, no otra prueba independiente. Estas cifras no son mediciones
+del firmware después de `WiFi.setSleep(false)`.
