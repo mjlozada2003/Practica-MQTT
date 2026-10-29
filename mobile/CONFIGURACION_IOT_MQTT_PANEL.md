@@ -31,14 +31,23 @@ No reutilizar el mismo Client ID en dos teléfonos abiertos simultáneamente.
 
 ### Switches rojo, amarillo y verde
 
-Los tres publican en `sis234/2026-2/grupo6/actuadores/leds/cmd`, QoS 1 y
-Retain desactivado.
+Los tres publican en `sis234/2026-2/grupo6/actuadores/leds/cmd`, QoS 0
+(configuracion probada en el telefono), Retain desactivado.
 
-| Switch | Payload ON | Payload OFF |
+- Activar **Disable dashboard prefix topic** con topicos completos.
+- Configurar **Subscribe Topic**: `sis234/2026-2/grupo6/actuadores/leds/estado`.
+- Activar **Payload is JSON Data**.
+- **Payload on**: `true` (sin comillas); **Payload off**: `false`.
+- **JSON pattern for publish**: incluye `<payload>` sin comillas.
+
+| Switch | JSONPath subscribe | JSON pattern publish |
 |---|---|---|
-| Rojo | `{"rojo":true}` | `{"rojo":false}` |
-| Amarillo | `{"amarillo":true}` | `{"amarillo":false}` |
-| Verde | `{"verde":true}` | `{"verde":false}` |
+| Rojo | `$.rojo` | `{"rojo":<payload>}` |
+| Amarillo | `$.amarillo` | `{"amarillo":<payload>}` |
+| Verde | `$.verde` | `{"verde":<payload>}` |
+
+Estos ajustes publican JSON booleano valido; no usar JSON completo simultaneamente
+como Payload on/off y como plantilla de publicacion.
 
 ### Indicadores confirmados
 

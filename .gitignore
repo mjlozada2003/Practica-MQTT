@@ -14,4 +14,5 @@ include/Configuracion.h
 .python/
 docs/evidencias/resultados/
 mobile/export/*.json
+!mobile/export/panel_grupo6_export.json
 !mobile/export/.gitkeep

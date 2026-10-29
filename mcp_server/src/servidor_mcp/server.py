@@ -13,7 +13,7 @@ try:
 except ImportError:  # Compatibilidad con la disposicion del SDK 2.x.
     from mcp.server.mcpserver import MCPServer
 
-from .bridge import ConfiguracionMqtt, PuenteMqtt
+from .bridge import ConfiguracionMqtt, ErrorObjetoInteligente, PuenteMqtt
 from .service import ServicioObjetoInteligente
 
 logging.basicConfig(
@@ -36,7 +36,16 @@ def obtener_distancia() -> dict[str, Any]:
     Devuelve centimetros, validez, disponibilidad del ESP32 y antiguedad de la
     lectura. Nunca inventa una medicion si el objeto esta desconectado.
     """
-    return servicio.obtener_distancia()
+    try:
+        return servicio.obtener_distancia()
+    except ErrorObjetoInteligente as error:
+        # Una lectura nula o desactualizada es una condicion operativa esperada,
+        # no una falla interna del protocolo MCP. Nunca inventar distancias.
+        return {
+            "cm": None,
+            "valida": False,
+            "mensaje": str(error),
+        }
 
 
 @mcp.tool()

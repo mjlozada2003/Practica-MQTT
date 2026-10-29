@@ -60,9 +60,11 @@ inválido, tipos no booleanos y campos desconocidos.
 | Publicación | 1 lectura/s | Conteo durante 30 segundos |
 | Reconexión | Automática | Corte y restauración de WiFi/MQTT |
 
-La frecuencia de 1 Hz es deliberada: permite una gráfica fluida sin publicar
-telemetría innecesaria. El bucle MQTT se procesa continuamente, de modo que la
-respuesta de los LEDs no espera a la siguiente medición.
+La frecuencia de 1 Hz es la configuracion actualmente probada; la referencia
+academica es 2 Hz. El bucle MQTT se procesa continuamente, de modo que la
+respuesta de los LEDs no espera a la siguiente medicion. Para alcanzar 2 Hz,
+cambiar SENSOR_PUBLISH_INTERVAL_MS a 500 en el archivo de configuracion local
+y repetir pruebas; no se ha aplicado ese cambio en este ZIP.
 
 ## Preparar y cargar el firmware
 
@@ -106,15 +108,23 @@ Herramientas expuestas:
 | `obtener_estado_leds` | Ninguno | Devuelve el estado confirmado de los tres LEDs |
 | `controlar_leds` | `rojo?`, `amarillo?`, `verde?` | Cambia LEDs y espera `ack_id` hasta 900 ms |
 
-Copiar `config/claude_desktop_config.example.json` a la configuración local de
+Copiar `config/claude_desktop_config.example.json` a la configuracion local de
 Claude Desktop, reemplazar ambas rutas absolutas y cerrar Claude completamente
 antes de volver a abrirlo.
+
+Si el sensor publica `{"cm":null,"valida":false}`, la herramienta de lectura
+responde un resultado estructurado con `cm: null`, `valida: false` y `mensaje`
+en lugar de fallar con un error inesperado. Requiere reiniciar Claude Desktop
+tras actualizar el servidor Python.
 
 ## Verificación y defensa
 
 - [Guía de Demo](docs/GUIA_DEMO.md)
 - [Guía de defensa individual](docs/GUIA_DEFENSA.md)
 - [Plantilla de evidencias](docs/evidencias/plantilla_mediciones.csv)
+- [Resultados registrados en pruebas reales](docs/evidencias/RESULTADOS_2026-10-29.md)
+- [Mediciones comprobadas (CSV)](docs/evidencias/mediciones_2026-10-29.csv)
+- [Script de medicion MQTT](scripts/medir_latencia_mqtt.py)
 
 Cada integrante debe realizar commits desde su propia cuenta. Antes de publicar:
 
