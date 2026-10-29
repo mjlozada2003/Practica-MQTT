@@ -22,7 +22,7 @@ class ConfiguracionMqtt:
     puerto: int = 1883
     keepalive: int = 30
     topic_base: str = "sis234/2026-2/grupo6"
-    timeout_ack: float = 0.9
+    timeout_ack: float = 3.0
     antiguedad_maxima_distancia: float = 3.5
 
     @classmethod
@@ -207,10 +207,19 @@ class PuenteMqtt:
                     )
                 restante = limite - time.monotonic()
                 if restante <= 0:
-                    raise ErrorObjetoInteligente(
-                        "El ESP32 no confirmo el comando dentro de "
-                        f"{round(self.configuracion.timeout_ack * 1000)} ms."
-                    )
+                    # El cliente acepto la publicacion, pero no hay evidencia
+                    # de que el ESP32 haya aplicado el cambio.
+                    return {
+                        "enviado": True,
+                        "confirmado": False,
+                        "ack_id": identificador,
+                        "latencia_ms": round((time.monotonic() - inicio) * 1000),
+                        "mensaje": (
+                            "El cliente MQTT acepto la publicacion, pero el ESP32 "
+                            "no confirmo el comando dentro del plazo. El estado "
+                            "del LED es desconocido; consulta obtener_estado_leds."
+                        ),
+                    }
                 self._condicion.wait(restante)
             estado = self._confirmaciones.pop(identificador)
 
@@ -218,6 +227,7 @@ class PuenteMqtt:
             raise ErrorObjetoInteligente("La confirmacion no coincide con el comando.")
         return {
             **estado,
+            "enviado": True,
             "confirmado": True,
             "latencia_ms": round((time.monotonic() - inicio) * 1000),
             "ack_id": identificador,
@@ -279,7 +289,11 @@ class PuenteMqtt:
             if not isinstance(datos, dict):
                 raise ValueError("el payload no es un objeto JSON")
             if mensaje.topic == self.configuracion.topic_distancia:
-                self._actualizar_distancia(datos)
+                # Un mensaje retenido puede proceder de horas antes. Sin una
+                # marca de tiempo en el payload no puede considerarse fresco.
+                # El ESP32 envia una nueva lectura al recuperar MQTT.
+                if not getattr(mensaje, "retain", False):
+                    self._actualizar_distancia(datos)
             elif mensaje.topic == self.configuracion.topic_estado_leds:
                 self._actualizar_leds(datos)
             elif mensaje.topic == self.configuracion.topic_dispositivo:
@@ -325,9 +339,9 @@ class PuenteMqtt:
         if type(en_linea) is not bool:
             raise ValueError("en_linea debe ser booleano")
         with self._condicion:
-            if en_linea != self._dispositivo_en_linea:
-                # Un cambio online/offline invalida los valores de la sesion
-                # anterior. Esperar mensajes nuevos para publicar estado fiable.
+            if not en_linea:
+                # Un mensaje OFFLINE invalida datos y ACK anteriores. ONLINE
+                # no elimina una lectura nueva recibida antes de este aviso.
                 self._invalidar_cache()
             self._dispositivo_en_linea = en_linea
             self._condicion.notify_all()

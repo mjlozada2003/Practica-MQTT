@@ -137,8 +137,10 @@ uv run servidor-mqtt-mcp
 
 Crear `.env` una sola vez. Permite configurar broker, puerto, keepalive,
 prefijo de tópicos, espera del ACK y antigüedad máxima de la distancia. Los
-valores predeterminados son 1883, 30 s, `sis234/2026-2/grupo6`, 0.9 s para ACK
+valores predeterminados son 1883, 30 s, `sis234/2026-2/grupo6`, 3 s para ACK
 y 3.5 s de antigüedad máxima. `.env` está excluido de Git.
+Si ya existe un `.env` local, actualizar `MQTT_ACK_TIMEOUT_SECONDS=3.0`:
+copiar la plantilla no modifica ese archivo existente.
 
 Para conectar Claude, utilizar la sección `mcpServers` de
 [claude_desktop_config.example.json](config/claude_desktop_config.example.json)
@@ -152,12 +154,16 @@ El servidor usa `stdio` para MCP y envía sus logs a `stderr`.
 |---|---|---|
 | `obtener_distancia` | Ninguno | Devuelve cm, validez, disponibilidad y antigüedad de la lectura |
 | `obtener_estado_leds` | Ninguno | Consulta el estado de los tres LEDs reportado por el ESP32 |
-| `controlar_leds` | `rojo`, `amarillo`, `verde`: booleanos opcionales | Cambia los colores indicados y espera su `ack_id` hasta 900 ms |
+| `controlar_leds` | `rojo`, `amarillo`, `verde`: booleanos opcionales | Cambia los colores indicados y espera su `ack_id` hasta 3 s |
 
 Si no hay una distancia disponible, `obtener_distancia` devuelve `cm: null`,
 `valida: false` y un `mensaje` explicativo. La antigüedad de la lectura no es la
 latencia de un comando. La confirmación de LEDs corresponde al estado informado
 por el firmware.
+Si el comando no recibe ACK a tiempo, `controlar_leds` devuelve
+`enviado: true, confirmado: false`: la publicación fue aceptada localmente,
+pero el estado físico queda desconocido. Las distancias MQTT retenidas no se
+consideran mediciones recientes; el MCP espera la siguiente publicación nueva.
 
 Ejemplos de uso en Claude: «¿A qué distancia está el objeto?», «Enciende el rojo y
 apaga los demás» y «Apaga los tres LEDs».
@@ -176,6 +182,15 @@ Pruebas Python desde `mcp_server`:
 uv run pytest
 ```
 
+Para verificar seis combinaciones de LEDs con ACK y observación física, desde
+`mcp_server` y con el ESP32 conectado:
+
+```powershell
+uv run python ../scripts/prueba_leds_mqtt.py
+```
+
+Esta prueba cambia LEDs reales y termina solicitando que queden apagados.
+
 Para registrar mediciones MQTT, desde `mcp_server`:
 
 ```powershell
@@ -192,7 +207,7 @@ video o instrumentación que observe ambos eventos.
 ## Resultados registrados el 29/10/2026
 
 Las evidencias incluyen lecturas y confirmaciones aportadas por el grupo,
-capturas y CSV. Las ocho pruebas Python pasaron con MCP 2.3.0 y paho-mqtt 2.1.0
+capturas y CSV. Las doce pruebas Python pasaron con MCP 2.3.0 y paho-mqtt 2.1.0
 instalados; las pruebas usan un cliente MQTT simulado.
 
 | Referencia física | Lectura | Error absoluto |
@@ -216,8 +231,9 @@ por sí solas el error máximo de todo el rango en cualquier condición.
 
 Quedan pendientes la medición física toque → LED, el registro específico de
 latencias de Claude y la comprobación de importación del panel en otro teléfono.
-El timeout MCP de 900 ms puede vencer antes de que llegue una confirmación;
-no equivale por sí solo a que el LED no haya cambiado.
+El timeout MCP es de 3 segundos y no equivale a una garantía de latencia
+menor a 1 segundo. Se desactivó el ahorro WiFi del ESP32 para reducir posibles
+demoras, con mayor consumo; falta repetir las mediciones físicas tras ese cambio.
 
 Archivos de respaldo:
 

@@ -7,6 +7,7 @@ ConexionWifi::ConexionWifi(const char* ssid, const char* clave,
 
 void ConexionWifi::iniciar() {
     WiFi.mode(WIFI_STA);
+    WiFi.setSleep(false);  // Menor espera en WiFi; mayor consumo energetico.
     WiFi.setAutoReconnect(true);
     primerIntento_ = true;
     actualizar();

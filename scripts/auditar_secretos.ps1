@@ -6,7 +6,8 @@ if ($plantilla -notmatch '"TU_RED_WIFI"' -or
     Write-Error 'La plantilla WiFi fue modificada: restaurar los placeholders antes de publicar.'
 }
 
-$patron = '(?i)(password|passwd|clave|secret|token|api[_-]?key)\s*[:=]\s*["''][^"'']{4,}["'']'
+# Detecta asignaciones C/C++ con [] y JSON sin mostrar valores secretos.
+$patron = '(?i)(?:\b[\w-]*(?:password|passwd|clave|secret|token|api[_-]?key)[\w-]*(?:\[\s*\])?|"[\w-]*(?:password|passwd|clave|secret|token|api[_-]?key)[\w-]*")\s*[:=]\s*["''][^"'']{4,}["'']'
 $exclusiones = @(
     '--glob', '!include/ConfiguracionEjemplo.h',
     '--glob', '!mcp_server/.env.example',
@@ -19,9 +20,9 @@ $exclusiones = @(
     '--glob', '!**/.pytest_cache/**'
 )
 
-& rg --line-number @exclusiones $patron .
+& rg --no-ignore --hidden --files-with-matches @exclusiones $patron .
 if ($LASTEXITCODE -eq 0) {
-    Write-Error 'Se encontraron posibles secretos. Revisar antes de publicar.'
+    Write-Error 'Posibles secretos encontrados (incluidos locales ignorados). No publicar esos archivos.'
 }
 if ($LASTEXITCODE -eq 1) {
     Write-Output 'Auditoria completada: no se detectaron posibles secretos.'
