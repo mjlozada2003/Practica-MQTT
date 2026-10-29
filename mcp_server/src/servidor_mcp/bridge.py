@@ -92,6 +92,19 @@ class PuenteMqtt:
         self._confirmaciones: dict[str, dict[str, bool]] = {}
         self._iniciado = False
 
+    def _invalidar_cache(self) -> None:
+        """Descartar telemetria y ACK de una sesion que ya no es fiable.
+
+        Invocar siempre bajo self._condicion. Tras una reconexion no se asume
+        que el ESP32 sigue conectado hasta recibir disponibilidad MQTT nueva.
+        """
+        self._dispositivo_en_linea = False
+        self._distancia = None
+        self._distancia_valida = False
+        self._instante_distancia = None
+        self._estado_leds = None
+        self._confirmaciones.clear()
+
     def iniciar(self) -> None:
         if self._iniciado:
             return
@@ -117,6 +130,10 @@ class PuenteMqtt:
 
     def obtener_distancia(self) -> dict[str, Any]:
         with self._condicion:
+            if not self._broker_conectado:
+                raise ErrorObjetoInteligente(
+                    "El servidor MCP no esta conectado al broker MQTT."
+                )
             if not self._dispositivo_en_linea:
                 raise ErrorObjetoInteligente("El ESP32 esta desconectado.")
             if (
@@ -139,6 +156,10 @@ class PuenteMqtt:
 
     def obtener_estado_leds(self) -> dict[str, Any]:
         with self._condicion:
+            if not self._broker_conectado:
+                raise ErrorObjetoInteligente(
+                    "El servidor MCP no esta conectado al broker MQTT."
+                )
             if not self._dispositivo_en_linea:
                 raise ErrorObjetoInteligente("El ESP32 esta desconectado.")
             if self._estado_leds is None:
@@ -176,6 +197,14 @@ class PuenteMqtt:
         limite = inicio + self.configuracion.timeout_ack
         with self._condicion:
             while identificador not in self._confirmaciones:
+                if not self._broker_conectado:
+                    raise ErrorObjetoInteligente(
+                        "Conexion MQTT perdida mientras se esperaba el ACK."
+                    )
+                if not self._dispositivo_en_linea:
+                    raise ErrorObjetoInteligente(
+                        "ESP32 desconectado mientras se esperaba el ACK."
+                    )
                 restante = limite - time.monotonic()
                 if restante <= 0:
                     raise ErrorObjetoInteligente(
@@ -198,19 +227,37 @@ class PuenteMqtt:
                      reason_code: Any, properties: Any) -> None:
         del userdata, flags, properties
         if getattr(reason_code, "is_failure", False):
+            with self._condicion:
+                self._broker_conectado = False
+                self._invalidar_cache()
+                self._condicion.notify_all()
             logger.error("Conexion MQTT rechazada: %s", reason_code)
             return
         with self._condicion:
+            # Los datos guardados antes del corte no prueban disponibilidad actual.
+            self._invalidar_cache()
             self._broker_conectado = True
             self._condicion.notify_all()
-        client.subscribe(
+
+        resultado, mid = client.subscribe(
             [
                 (self.configuracion.topic_distancia, 0),
                 (self.configuracion.topic_estado_leds, 0),
                 (self.configuracion.topic_dispositivo, 0),
             ]
         )
-        logger.info("Conectado y suscrito a los topicos del grupo 6")
+        if resultado != mqtt.MQTT_ERR_SUCCESS:
+            logger.error(
+                "No se pudo enviar SUBSCRIBE MQTT (rc=%s); reconectando", resultado
+            )
+            with self._condicion:
+                self._broker_conectado = False
+                self._invalidar_cache()
+                self._condicion.notify_all()
+            client.disconnect()
+            return
+        # Paho confirma el envio de SUBSCRIBE; la aceptacion del broker es SUBACK.
+        logger.info("Conectado al broker. SUBSCRIBE enviado (mid=%s)", mid)
 
     def _al_desconectar(self, client: mqtt.Client, userdata: Any,
                         disconnect_flags: Any, reason_code: Any,
@@ -218,8 +265,12 @@ class PuenteMqtt:
         del client, userdata, disconnect_flags, properties
         with self._condicion:
             self._broker_conectado = False
+            self._invalidar_cache()
             self._condicion.notify_all()
-        logger.warning("Desconexion MQTT: %s; se reintentara automaticamente", reason_code)
+        logger.warning(
+            "Desconexion MQTT: %s; cache invalidada y reconexion automatica",
+            reason_code,
+        )
 
     def _al_recibir(self, client: mqtt.Client, userdata: Any, mensaje: Any) -> None:
         del client, userdata
@@ -274,5 +325,9 @@ class PuenteMqtt:
         if type(en_linea) is not bool:
             raise ValueError("en_linea debe ser booleano")
         with self._condicion:
+            if en_linea != self._dispositivo_en_linea:
+                # Un cambio online/offline invalida los valores de la sesion
+                # anterior. Esperar mensajes nuevos para publicar estado fiable.
+                self._invalidar_cache()
             self._dispositivo_en_linea = en_linea
             self._condicion.notify_all()

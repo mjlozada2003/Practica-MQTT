@@ -98,9 +98,25 @@ void ClienteMqtt::conectar() {
         Serial.printf("[MQTT] Fallo estado=%d\n", cliente_.state());
         return;
     }
-    cliente_.subscribe(topicComando_, 1);
-    cliente_.publish(topicDisponibilidad_, "{\"en_linea\":true}", true);
+    // PubSubClient devuelve true si pudo enviar SUBSCRIBE, no confirma SUBACK.
+    if (!cliente_.subscribe(topicComando_, 1)) {
+        Serial.printf("[MQTT] ERROR: no se pudo enviar SUBSCRIBE a %s "
+                      "(estado=%d). Reintentando conexion.\n",
+                      topicComando_, cliente_.state());
+        cliente_.disconnect();
+        return;
+    }
+    Serial.printf("[MQTT] Solicitud SUBSCRIBE enviada: %s (QoS 1)\n",
+                  topicComando_);
+
+    if (!cliente_.publish(topicDisponibilidad_, "{\"en_linea\":true}", true)) {
+        Serial.printf("[MQTT] ERROR: no se pudo publicar disponibilidad "
+                      "(estado=%d). Reintentando conexion.\n",
+                      cliente_.state());
+        cliente_.disconnect();
+        return;
+    }
     esperaActualMs_ = esperaBaseMs_;
-    Serial.println("[MQTT] Conectada y suscrita a comandos");
+    Serial.println("[MQTT] Conexion activa y disponibilidad publicada");
     if (alConectar_ != nullptr) alConectar_();
 }
