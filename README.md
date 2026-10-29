@@ -229,11 +229,6 @@ por sí solas el error máximo de todo el rango en cualquier condición.
 | 30 comandos automáticos | Promedio 922.03 ms; máximo 1996.7 ms; 6 por encima de 1 s | Publicación local → ACK |
 | 10 comandos observados del móvil | Promedio 452.0 ms; máximo 628.5 ms | Comando observado → confirmación observada |
 
-Quedan pendientes la medición física toque → LED, el registro específico de
-latencias de Claude y la comprobación de importación del panel en otro teléfono.
-El timeout MCP es de 3 segundos y no equivale a una garantía de latencia
-menor a 1 segundo. Se desactivó el ahorro WiFi del ESP32 para reducir posibles
-demoras, con mayor consumo; falta repetir las mediciones físicas tras ese cambio.
 
 Archivos de respaldo:
 
